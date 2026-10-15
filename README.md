@@ -16,6 +16,8 @@ The idea is not new. This project is a self-hosted version of it.
 
 - [obsid.net](https://obsid.net): a hosted redirect service that turns `vault` and `file` query parameters into
   `obsidian://` links.
+- [Ibraheem-Khalil/obsidian-link-bridge](https://github.com/Ibraheem-Khalil/obsidian-link-bridge) (2025): a
+  one-page redirect that reads `vault` and `file` from the query string and opens `obsidian://open`.
 - [SvenAkk/obsidian-link-bridge](https://github.com/SvenAkk/obsidian-link-bridge): a static bridge page on GitHub
   Pages that also carries the note in the URL fragment.
 
@@ -156,3 +158,6 @@ included, through Google.
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+Not affiliated with or endorsed by Obsidian. "Obsidian" is a trademark of its owner; the name is used here only
+to say what the bridge opens.
