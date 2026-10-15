@@ -1,0 +1,16 @@
+// obsidian-link-bridge: a static https page that forwards to obsidian:// links, so Obsidian links
+// are clickable where only https links are (Google Calendar, many chat and ticket tools).
+// Static assets only: no Worker script runs, and nothing can log the URL fragment (browsers never send it).
+//
+// The hostname is not in this file. ./deploy.sh passes it with `wrangler deploy --domain`, from deploy.env.
+{
+  "name": "obsidian-link-bridge",
+  "compatibility_date": "2026-10-13",
+  "assets": {
+    "directory": "./public",
+    "html_handling": "drop-trailing-slash",
+    "not_found_handling": "none"
+  },
+  "workers_dev": false,
+  "observability": { "enabled": false }
+}
