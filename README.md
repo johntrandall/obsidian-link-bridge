@@ -1,13 +1,27 @@
 # obsidian-link-bridge
 
-A one-page static site that turns an https link into an `obsidian://` link, so links to Obsidian notes
-are clickable in apps that only make https links clickable: Google Calendar event descriptions, many chat,
-email and ticket tools. You host it yourself; it runs no server code and keeps no logs of what you open.
+A **self-hosted** https-to-Obsidian link bridge. Apps such as Google Calendar only make https links
+clickable, so an `obsidian://` link in an event description is dead text. Point those apps at a bridge link on
+your own domain instead; the page opens the note in Obsidian. It is a few static files, runs no server code
+and keeps no record of what you open.
 
 ```
 https://links.example.com/obsidian#vault=Notes&filepath=projects%2FPlan.md&openmode=tab
         → obsidian://advanced-uri?vault=Notes&filepath=projects%2FPlan.md&openmode=tab
 ```
+
+## Prior art
+
+The idea is not new. This project is a self-hosted version of it.
+
+- [obsid.net](https://obsid.net): a hosted redirect service that turns `vault` and `file` query parameters into
+  `obsidian://` links.
+- [SvenAkk/obsidian-link-bridge](https://github.com/SvenAkk/obsidian-link-bridge): a static bridge page on GitHub
+  Pages that also carries the note in the URL fragment.
+
+What this version adds: it runs on your own domain, works with any vault and with both Obsidian's built-in
+`obsidian://open` and the [Advanced URI](https://github.com/Vinzent03/obsidian-advanced-uri) plugin (so a link
+can open in a new tab), and forwards only "open a note" parameters (see [Security model](#security-model)).
 
 ## How it works
 
@@ -33,10 +47,84 @@ The page picks the action from the parameters:
 
 | Fragment has | Opens | Allowed parameters |
 |---|---|---|
-| `filepath=` | `obsidian://advanced-uri?…` ([Advanced URI](https://github.com/Vinzent03/obsidian-advanced-uri) plugin; `openmode=tab` opens a new tab) | `vault` `filepath` `openmode` `viewmode` `heading` `block` `line` |
+| `filepath=` | `obsidian://advanced-uri?…` (Advanced URI plugin; `openmode=tab` opens a new tab) | `vault` `filepath` `openmode` `viewmode` `heading` `block` `line` |
 | `file=` or `path=` | `obsidian://open?…` (built into Obsidian) | `vault` `file` `path` `paneType` |
 
 Encode values with `encodeURIComponent` (Python: `urllib.parse.quote(value, safe='')`). A literal `+` stays a `+`.
+
+## Self-hosting
+
+The site is deployed as a Cloudflare [Workers static-assets](https://developers.cloudflare.com/workers/static-assets/)
+project with no Worker script, which fits the free plan. For other hosts, see [Other static hosts](#other-static-hosts).
+
+### What you need
+
+- A Cloudflare account, and a domain whose DNS is on Cloudflare. The bridge gets its own hostname in that
+  domain, for example `links.example.com`; Cloudflare creates the DNS record and certificate.
+- Node.js 18 or later (for the tests) and [Wrangler](https://developers.cloudflare.com/workers/wrangler/):
+  `npm install -g wrangler` or `brew install cloudflare-wrangler`.
+- Obsidian on the computer where you click the links. For `filepath=` links, the Advanced URI plugin.
+
+### 1. Get the code
+
+```bash
+git clone https://github.com/johntrandall/obsidian-link-bridge
+cd obsidian-link-bridge
+node --test test/
+```
+
+### 2. Create a Cloudflare API token
+
+In the Cloudflare dashboard: **My Profile → API Tokens → Create Token**, use the **Edit Cloudflare Workers**
+template, set **Account Resources** to your account and **Zone Resources** to the zone your hostname is in,
+then create it and copy the token. Your account ID is in the dashboard URL
+(`dash.cloudflare.com/<account id>/…`) and on the account's overview page.
+
+### 3. Configure
+
+```bash
+cp deploy.env.example deploy.env
+```
+
+Fill in `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN` and `BRIDGE_DOMAIN` (the hostname, without `https://`).
+`deploy.env` is git-ignored; keep it that way. If you use 1Password, the values can be secret references
+(`op://vault/item/field`); `deploy.sh` then runs Wrangler under `op run`, so the token is never written to disk.
+
+### 4. Deploy
+
+```bash
+./deploy.sh
+```
+
+It runs the tests, then `wrangler deploy --domain "$BRIDGE_DOMAIN"`. Run it again after any change.
+
+### 5. Check it
+
+```bash
+curl -sI https://links.example.com/obsidian        # HTTP 200, x-robots-tag: noindex
+curl -s -H 'Accept: text/html' https://links.example.com/obsidian | grep -c cloudflareinsights   # 0
+```
+
+Then open a bridge link to a real note in your browser, tick **Always allow** when it asks to open Obsidian,
+and confirm the note opens. Put bridge links wherever you need clickable note links.
+
+### Cloudflare Web Analytics
+
+If Web Analytics is on for your zone (Analytics & Logs → Web Analytics; it may already be on), Cloudflare adds
+its beacon `<script>` to HTML responses at the edge. In our testing it did so for requests that send
+`Accept: text/html`, which browsers do and a plain `curl` does not, so it is easy to miss. The page blocks the
+script with its Content Security Policy, and `public/_headers` sends `Cache-Control: no-transform`, which stops
+the injection. The second `curl` above checks it.
+
+### Removing it
+
+`wrangler delete` removes the Worker. Then delete the hostname's DNS record in the Cloudflare dashboard if it
+remains.
+
+### Other static hosts
+
+Any static host works: serve `public/` and make `/obsidian` return `obsidian.html`. `public/_headers` uses the
+Cloudflare/Netlify format; on other hosts, set the same response headers in their own configuration.
 
 ## Security model
 
@@ -53,42 +141,6 @@ What the bridge cannot hide: the app that shows the link sees the whole link. Fo
 stores it in the event, and its click-through redirect (`google.com/url?q=…`) passes the full URL, fragment
 included, through Google.
 
-## Deploy your own (Cloudflare Workers)
-
-The site is plain static files, deployed as a [Workers static-assets](https://developers.cloudflare.com/workers/static-assets/)
-project with no Worker script. It fits the free plan. You need a domain whose DNS is on Cloudflare.
-
-```bash
-git clone https://github.com/johntrandall/obsidian-link-bridge && cd obsidian-link-bridge
-npm install -g wrangler            # or: brew install cloudflare-wrangler
-cp deploy.env.example deploy.env   # fill in account id, API token, hostname
-./deploy.sh                        # runs the tests, then: wrangler deploy --domain "$BRIDGE_DOMAIN"
-curl -sI https://links.example.com/obsidian
-```
-
-- **API token:** create one from the "Edit Cloudflare Workers" template, with zone access to the zone your
-  hostname is in. `wrangler deploy --domain` creates the DNS record and certificate for the hostname.
-- **1Password:** `deploy.env` values may be secret references (`op://vault/item/field`). `deploy.sh` then
-  runs `wrangler` under `op run`, so the token never touches disk.
-- `deploy.env` is git-ignored. Keep it that way.
-
-### Cloudflare Web Analytics will inject a script unless you stop it
-
-If Web Analytics is on for your zone (check Analytics & Logs → Web Analytics; it may already be on), Cloudflare
-adds its beacon `<script>` to HTML responses at the edge. In our testing it did so for requests that send
-`Accept: text/html`, which browsers do and a plain `curl` does not, so it is easy to miss. The CSP above blocks
-the script, and `public/_headers` sends `Cache-Control: no-transform`, which stops the injection. Check your
-deployment with:
-
-```bash
-curl -s -H 'Accept: text/html' https://links.example.com/obsidian | grep -c cloudflareinsights   # expect 0
-```
-
-### Other static hosts
-
-Any static host works: serve `public/` and make `/obsidian` return `obsidian.html`. `public/_headers` uses the
-Cloudflare/Netlify format; on other hosts, set the same response headers in their own configuration.
-
 ## Files
 
 | Path | What |
@@ -97,7 +149,7 @@ Cloudflare/Netlify format; on other hosts, set the same response headers in thei
 | `public/obsidian.js` | Fragment → `obsidian://` URI, with the allowlist; also loads in Node for the tests |
 | `public/_headers` | Response headers (security, `noindex`, `no-transform`); not served as a file |
 | `public/index.html`, `public/bridge.css`, `public/robots.txt` | Root page, styles (light and dark), crawl block |
-| `test/obsidian.test.js` | `node --test test/` (Node 18+) |
+| `test/obsidian.test.js` | `node --test test/` |
 | `wrangler.jsonc` | Worker config: static assets only, `workers.dev` and observability off, no hostname |
 | `deploy.sh`, `deploy.env.example` | Test-and-deploy script and its settings template |
 
