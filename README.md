@@ -10,6 +10,16 @@ https://links.example.com/obsidian#vault=Notes&filepath=projects%2FPlan.md&openm
         → obsidian://advanced-uri?vault=Notes&filepath=projects%2FPlan.md&openmode=tab
 ```
 
+## In plain terms
+
+Google Calendar, email and most chat apps only make ordinary web links clickable, so a link to a note in Obsidian
+shows up as dead text. This gives each note a normal web address on your own domain: click it, and the note opens in
+Obsidian. It saves the small daily hunt for the right note before a meeting.
+
+- Privacy-preserving: the website in the middle never sees which note you're opening.
+- Nothing to maintain: a single web page on your own domain, free to host, with no server of your own to run.
+- Safe by design: it can only open notes, so a link someone else sends can't make Obsidian do anything else.
+
 ## Prior art, and why yet another one
 
 Yes, this is yet another Obsidian link bridge; sorry about that. Others got there first, and they are worth a look:
