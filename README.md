@@ -14,29 +14,32 @@ https://links.example.com/obsidian#vault=Notes&filepath=projects%2FPlan.md&openm
 
 Yes, this is yet another Obsidian link bridge; sorry about that. Others got there first, and they are worth a look:
 
-- [obsid.net](https://obsid.net): a hosted redirect service that turns `vault` and `file` query parameters into
-  `obsidian://` links.
+- [obsid.net](https://obsid.net) ([source](https://github.com/jdevalk/obsid.net)): a redirect service, also
+  self-hostable as a Cloudflare Worker, that turns `vault` and `file` query parameters into `obsidian://open` links.
 - [Ibraheem-Khalil/obsidian-link-bridge](https://github.com/Ibraheem-Khalil/obsidian-link-bridge) (2025): a
   one-page redirect that reads `vault` and `file` from the query string and opens `obsidian://open`.
 - [SvenAkk/obsidian-link-bridge](https://github.com/SvenAkk/obsidian-link-bridge): a static page on GitHub Pages
   that carries a note path and line in the URL fragment and opens it with Advanced URI.
 
-This one exists because of licensing. Neither repository above carries a license, and without one nobody may
-legally copy, modify or redistribute the code, so extending one of them was not an option. This project is
-**MIT-licensed** (see [LICENSE](LICENSE)): fork it, change it, ship it.
+Why another one: the two GitHub bridges carry no license, and without one nobody may legally copy, modify or
+redistribute their code. obsid.net is MIT-licensed (stated on its site) and self-hostable, but it reads the note
+from the query string in server code and only produces `obsidian://open` links. This project keeps the note out of
+every request, runs no server code, supports Advanced URI, and is **MIT-licensed** (see [LICENSE](LICENSE)): fork
+it, change it, ship it.
 
 As far as we can tell (checked 2026-10-15), it is also the most complete of the four:
 
 | | obsid.net | Ibraheem-Khalil | SvenAkk | this project |
 |---|---|---|---|---|
-| Runs on your own domain | No (hosted service) | Yes | Yes (GitHub Pages) | Yes |
+| Runs on your own domain | Yes (self-host the Worker), or use obsid.net | Yes | Yes (GitHub Pages) | Yes |
 | Note name never sent to the server | No (query string) | No (query string) | Yes (fragment) | Yes (fragment) |
 | Any vault | Yes | Yes | No (vault fixed in the code) | Yes |
 | Built-in `obsidian://open` | Yes | Yes | No | Yes |
 | [Advanced URI](https://github.com/Vinzent03/obsidian-advanced-uri) (new tab, heading, block, line) | No | No | Line only | Yes |
 | Only ever opens notes | Yes (fixed parameters) | Yes (fixed parameters) | Yes (fixed parameters) | Yes (explicit allowlist) |
-| Deploy kit | n/a | No | GitHub Pages | Cloudflare Workers script; any static host |
-| License | n/a (service) | None | None | MIT |
+| Runs no server code | No (Worker reads the query) | Yes | Yes | Yes |
+| Deploy kit | Cloudflare Worker (`wrangler`) | No | GitHub Pages | Cloudflare Workers script; any static host |
+| License | MIT (stated on obsid.net; no LICENSE file in the repo) | None | None | MIT |
 
 ## How it works
 
