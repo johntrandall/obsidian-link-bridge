@@ -1,3 +1,9 @@
+> **Deprecated (2026-10-16): superseded by [link-bridge](https://github.com/johntrandall/link-bridge).**
+> The same `/obsidian` page lives there unchanged, alongside `/reveal` (select a file or folder in Finder)
+> and `/vault-setup` (open or create an Obsidian vault), a loopback server installable with
+> `brew install johntrandall/tap/link-bridge`, and the same Cloudflare Workers deploy. Existing links to a
+> deployment of this page keep working; new deployments should use link-bridge. This repository is archived.
+
 # obsidian-link-bridge
 
 A **self-hosted** https-to-Obsidian link bridge. Apps such as Google Calendar only make https links
